@@ -6,8 +6,11 @@ http://img/5.png
 http://img/6.png
 http://img/7.png
 
-
+dnjferj/wdwde
 tp://img/7.png
 ttp://img/7.png
 
-
+https://media.geeksforgeeks.org/wp-content/uploads/20231130121654/Find-the-array-index-with-a-value-in-JavaScript.png
+https://i0.wp.com/www.mathscinotes.com/wp-content/uploads/2010/10/dispersion-curve1.png
+https://js-ts-node.github.io/wp-content/uploads/5/javascript-array-find-indexof-method-example.png
+https://www.swiftglass.com/assets/Screen-Shot-2019-01-22-at-11.04.32-AM-446x700.png

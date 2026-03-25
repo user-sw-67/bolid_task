@@ -4,7 +4,9 @@
 #include <vector>
 #include <chrono>
 #include <iomanip>
+#include <filesystem>
 
+#include "include/socket.hpp"
 
 
 // Логирование (в stdout с временем до мс):
@@ -23,6 +25,11 @@
 
 
 
+
+
+
+
+
 std::string current_time(){
     auto now = std::chrono::system_clock::now();
     auto now_time_t = std::chrono::system_clock::to_time_t(now);
@@ -36,8 +43,8 @@ std::string current_time(){
 }
 
 
-std::vector<std::string> file_read(const std::string& file_with_urls){
-    std::ifstream file(file_with_urls);
+std::vector<std::string> file_read(const std::string& file_name) {
+    std::ifstream file(file_name);
     std::vector<std::string> urls;
 
     if(!file.is_open()){
@@ -50,9 +57,9 @@ std::vector<std::string> file_read(const std::string& file_with_urls){
         if(line.empty()) continue;
 
         if ((line.find("https://") == 0) || (line.find("http://") == 0))
-            urls.push_back(line);   
+            urls.push_back(line);
     }
-    
+
     file.close();
     return urls;
 }
@@ -60,20 +67,28 @@ std::vector<std::string> file_read(const std::string& file_with_urls){
 
 int main(int argc, char const *argv[])
 {
-    if(argc != 4){
-        std::cerr << "Неверное количество аргументов! " 
-            << current_time() << std::endl;
-        std::cerr << "Использование: " << argv[0] << " <file_with_urls> "
-            "<output_directory> <concurrent_downloads>" << std::endl;
-        return 1;
-    }
-    std::string file_with_urls = argv[1];
-    std::string output_directory = argv[2];
-    std::string concurrent_downloads = argv[3];
-
     std::cout << "==================================" << std::endl;
     std::cout << "Программа запущена " << current_time() << std::endl;
     std::cout << "==================================" << std::endl;
+
+    if(argc != 4){
+        std::cerr << "Неверное количество аргументов! " 
+            << current_time() << std::endl;
+        std::cerr << "Использование: " << argv[0] << " <Файл с URL-адресами> "
+            "<Выходной каталог> <Количество одновременных загрузок>" 
+            << std::endl;
+        return 1;
+    }
+
+    std::string file_with_urls = argv[1];
+    std::string output_directory = argv[2];
+    int concurrent_downloads = std::stoi(argv[3]);
+    
+    if(!std::filesystem::exists(output_directory) ||
+        !std::filesystem::is_directory(output_directory)) {
+            std::filesystem::create_directories(output_directory);
+        }
+
     std::cout << "Файл с URL: " << file_with_urls << std::endl;
     std::cout << "Папка сохранения: " << output_directory << std::endl;
     std::cout << "Количество файлов загружаемых одновременно: " 
@@ -81,11 +96,12 @@ int main(int argc, char const *argv[])
     std::cout << "==================================" << std::endl;
 
 
-    std::vector<std::string> urls = file_read(file_with_urls);
-    for (auto it = urls.begin(); it != urls.end(); ++it){
-        std::cout << *it << std::endl;
-    }
+    SocketDefine socket;
+
     
+
+    std::cout << "Программа завершена " << current_time() << std::endl;
+    std::cout << "==================================" << std::endl;
 
     return 0;
 }
