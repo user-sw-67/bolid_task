@@ -1,8 +1,26 @@
-# Задача от BOLID
+# Задача от BOLID  
 
-### Локальная установка под Linux
-git clone https://github.com/user-sw-67/bolid_task.git
-cd bolid_task
-cd solution
-./build.sh
-./a.out file_with_urls.txt directory_for_files/ 10
+
+## Требования  
+
+### Общие  
+- **CMake** 3.10 или выше  
+- **C++ компилятор** с поддержкой C++17  
+
+
+## Локальная установка и запуск  
+
+### Клонирование репозитория  
+git clone https://github.com/user-sw-67/bolid_task.git  
+cd bolid_task/solution  
+
+### Создание папки для сборки и переход в неё  
+mkdir build  
+cd build/  
+
+### Компиляция  
+cmake ..  
+make  
+
+### Запуск  
+./loader <файл с url> <директория> <кол-во одновременных загрузок>  

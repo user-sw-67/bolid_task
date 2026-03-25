@@ -6,8 +6,8 @@
 #include <iomanip>
 #include <filesystem>
 
-#include "include/socket.hpp"
-#include "include/url_parser.hpp"
+#include "socket.hpp"
+#include "url_parser.hpp"
 
 
 
@@ -45,9 +45,9 @@ std::string current_time(){
 }
 
 
-std::vector<std::string> file_read(const std::string& file_name) {
+std::vector<UrlParser> file_read(const std::string& file_name) {
     std::ifstream file(file_name);
-    std::vector<std::string> urls;
+    std::vector<UrlParser> urls;
 
     if(!file.is_open()){
         std::cerr << "Файл невозможно открыть! " << current_time() << std::endl;
@@ -59,7 +59,7 @@ std::vector<std::string> file_read(const std::string& file_name) {
         if(line.empty()) continue;
 
         if ((line.find("https://") == 0) || (line.find("http://") == 0))
-            urls.push_back(line);
+            urls.push_back(UrlParser(line));
     }
 
     file.close();
@@ -103,17 +103,15 @@ int main(int argc, char const *argv[])
 
     SocketDefine socket;
 
-    std::vector<std::string> urls = file_read(file_with_urls);
+    std::vector<UrlParser> urls = file_read(file_with_urls);
     
     for (auto it = urls.begin(); it < urls.end(); ++it){
         std::cout << std::endl;
-        std::cout << *it << std::endl;
-        UrlParser a(*it);
-        std::cout << a.protocol << std::endl;
-        std::cout << a.host << std::endl;
-        std::cout << a.port << std::endl;
-        std::cout << a.path << std::endl;
-        std::cout << a.get_filename() << std::endl;
+        std::cout << it->protocol << std::endl;
+        std::cout << it->host << std::endl;
+        std::cout << it->port << std::endl;
+        std::cout << it->path << std::endl;
+        std::cout << it->get_filename() << std::endl;
     }
     
 

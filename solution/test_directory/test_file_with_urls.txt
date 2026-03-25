@@ -1,8 +1,8 @@
 http://example.com:90/index.html
 https://example.com/index.html
 http://example.com:8080/images/foto.jpg
-http://example.com:909/search.sj?q=cpp&page=2
-https://example.com/page.html#section1
+http://example.com:909/search.sj
+https://example.com/page.html
 http://sub.domain.example.com/folder/file.txt
 
 https://media.geeksforgeeks.org/wp-content/uploads/20231130121654/Find-the-array-index-with-a-value-in-JavaScript.png
