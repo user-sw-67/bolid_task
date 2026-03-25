@@ -5,10 +5,12 @@
 #include <chrono>
 #include <iomanip>
 #include <filesystem>
+#include <stdexcept>
+
 
 #include "socket.hpp"
 #include "url_parser.hpp"
-
+#include "client.hpp"
 
 
 // Логирование (в stdout с временем до мс):
@@ -50,8 +52,7 @@ std::vector<UrlParser> file_read(const std::string& file_name) {
     std::vector<UrlParser> urls;
 
     if(!file.is_open()){
-        std::cerr << "Файл невозможно открыть! " << current_time() << std::endl;
-        return urls;
+        throw std::runtime_error("Файл невозможно открыть!");
     }
 
     std::string line;
@@ -74,12 +75,7 @@ int main(int argc, char const *argv[])
     std::cout << "==================================" << std::endl;
 
     if(argc != 4){
-        std::cerr << "Неверное количество аргументов! " 
-            << current_time() << std::endl;
-        std::cerr << "Использование: " << argv[0] << " <Файл с URL-адресами> "
-            "<Выходной каталог> <Количество одновременных загрузок>" 
-            << std::endl;
-        return 1;
+        throw std::runtime_error("Неверное количество аргументов!");
     }
 
     std::string file_with_urls = argv[1];
@@ -106,12 +102,12 @@ int main(int argc, char const *argv[])
     std::vector<UrlParser> urls = file_read(file_with_urls);
     
     for (auto it = urls.begin(); it < urls.end(); ++it){
-        std::cout << std::endl;
-        std::cout << it->protocol << std::endl;
-        std::cout << it->host << std::endl;
-        std::cout << it->port << std::endl;
-        std::cout << it->path << std::endl;
-        std::cout << it->get_filename() << std::endl;
+        if(it->protocol == "http"){
+            RequestHTTP rq(*it);
+            rq.send_request();
+            rq.recv_request();
+        }
+        
     }
     
 

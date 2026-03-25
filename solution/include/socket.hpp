@@ -18,7 +18,8 @@
     #define closesocket close
 #endif
 
-struct SocketDefine{
+class SocketDefine{
+public:
     SocketDefine() {
         #ifdef _WIN32
             WSADATA wsaData;
