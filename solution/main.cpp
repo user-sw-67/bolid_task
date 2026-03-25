@@ -7,6 +7,8 @@
 #include <filesystem>
 
 #include "include/socket.hpp"
+#include "include/url_parser.hpp"
+
 
 
 // Логирование (в stdout с временем до мс):
@@ -96,9 +98,29 @@ int main(int argc, char const *argv[])
     std::cout << "==================================" << std::endl;
 
 
+
+
+
     SocketDefine socket;
 
+    std::vector<std::string> urls = file_read(file_with_urls);
     
+    for (auto it = urls.begin(); it < urls.end(); ++it){
+        std::cout << std::endl;
+        std::cout << *it << std::endl;
+        UrlParser a(*it);
+        std::cout << a.protocol << std::endl;
+        std::cout << a.host << std::endl;
+        std::cout << a.port << std::endl;
+        std::cout << a.path << std::endl;
+        std::cout << a.get_filename() << std::endl;
+    }
+    
+
+
+
+
+
 
     std::cout << "Программа завершена " << current_time() << std::endl;
     std::cout << "==================================" << std::endl;

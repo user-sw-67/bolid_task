@@ -1,14 +1,9 @@
-https://img/1.png
-https://img/2.png
-https://img/3.png
-https://img/4.png
-http://img/5.png
-http://img/6.png
-http://img/7.png
-
-dnjferj/wdwde
-tp://img/7.png
-ttp://img/7.png
+http://example.com:90/index.html
+https://example.com/index.html
+http://example.com:8080/images/foto.jpg
+http://example.com:909/search.sj?q=cpp&page=2
+https://example.com/page.html#section1
+http://sub.domain.example.com/folder/file.txt
 
 https://media.geeksforgeeks.org/wp-content/uploads/20231130121654/Find-the-array-index-with-a-value-in-JavaScript.png
 https://i0.wp.com/www.mathscinotes.com/wp-content/uploads/2010/10/dispersion-curve1.png
