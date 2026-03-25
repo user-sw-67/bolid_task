@@ -2,49 +2,14 @@
 #include <string>
 #include <fstream>
 #include <vector>
-#include <chrono>
 #include <iomanip>
 #include <filesystem>
 #include <stdexcept>
 
-
 #include "socket.hpp"
 #include "url_parser.hpp"
 #include "client.hpp"
-
-
-// Логирование (в stdout с временем до мс):
-
-// Запуск программы
-
-// Входные параметры
-
-// Начало загрузки файла
-
-// Окончание загрузки файла
-
-// Ошибки HTTP (не 200)
-
-// Завершение программы
-
-
-
-
-
-
-
-
-std::string current_time(){
-    auto now = std::chrono::system_clock::now();
-    auto now_time_t = std::chrono::system_clock::to_time_t(now);
-    auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        now.time_since_epoch()) % 1000;
-    
-    std::stringstream ss;
-    ss << std::put_time(std::localtime(&now_time_t), "%Y-%m-%d %H:%M:%S");
-    ss << '.' << std::setfill('0') << std::setw(3) << now_ms.count();
-    return ss.str();
-}
+#include "time.hpp"
 
 
 std::vector<UrlParser> file_read(const std::string& file_name) {
@@ -93,29 +58,17 @@ int main(int argc, char const *argv[])
         << concurrent_downloads << std::endl;
     std::cout << "==================================" << std::endl;
 
-
-
-
-
     SocketDefine socket;
 
     std::vector<UrlParser> urls = file_read(file_with_urls);
-    
     for (auto it = urls.begin(); it < urls.end(); ++it){
         if(it->protocol == "http"){
             RequestHTTP rq(*it);
             rq.send_request();
-            rq.recv_request();
+            rq.recv_request(output_directory);
         }
-        
     }
     
-
-
-
-
-
-
     std::cout << "Программа завершена " << current_time() << std::endl;
     std::cout << "==================================" << std::endl;
 

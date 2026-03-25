@@ -3,7 +3,6 @@
 
 #include <string>
 
-
 class UrlParser{
     static const int port_http = 80;
     static const int port_https = 443;
