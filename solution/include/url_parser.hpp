@@ -4,8 +4,8 @@
 #include <string>
 
 class UrlParser{
-    static const int port_http = 80;
-    static const int port_https = 443;
+    static const int port_http;
+    static const int port_https;
 public:
     std::string protocol;
     std::string host;

@@ -3,6 +3,7 @@
 
 #include <stdexcept>
 #include <fstream>
+#include <filesystem>
 #include <iostream>
 
 #include "socket.hpp"
@@ -10,28 +11,11 @@
 #include "time.hpp"
 
 
-
-class SocketHTTP{
-public:
-    SOCKET sock;
-
-    SocketHTTP() : sock(socket(AF_INET, SOCK_STREAM, 0)) {
-        if (sock == INVALID_SOCKET) {
-            throw std::runtime_error("Не могу создать сокет");
-        }
-    }
-
-    ~SocketHTTP(){
-        closesocket(sock);
-    }
-
-};
-
-class DNS_HTTP : public SocketHTTP{
+class DNS{
 public:
     addrinfo* dns_server;
 
-    DNS_HTTP(const UrlParser& url) : SocketHTTP(), dns_server(nullptr) {
+    DNS(const UrlParser& url) : dns_server(nullptr) {
         const char* host = url.host.c_str();
         const char* port = std::to_string(url.port).c_str();
         addrinfo hints = {};
@@ -43,7 +27,7 @@ public:
         }
     }
 
-    ~DNS_HTTP() {
+    ~DNS() {
         if(dns_server != nullptr) {
             freeaddrinfo(dns_server);
         }
@@ -52,9 +36,21 @@ public:
 };
 
 
-class ConnectHTTP : public DNS_HTTP {
+class DNS_HTTP : public SocketHTTP , public DNS{
 public:
-    ConnectHTTP(const UrlParser& url) : DNS_HTTP(url) {
+    DNS_HTTP(const UrlParser& url) : SocketHTTP(), DNS(url) {}
+};
+
+
+class DNS_HTTPS : public SSL_HTTP, public DNS{
+public:
+    DNS_HTTPS(const UrlParser& url) : SSL_HTTP(url), DNS(url) {}
+};
+
+
+class Connect{
+public:
+    Connect(const UrlParser& url, SOCKET sock, addrinfo* dns_server) {
         if(connect(sock, dns_server->ai_addr, dns_server->ai_addrlen) != 0) {
             throw std::runtime_error("Не удалось подключиться к серверу");
         }
@@ -62,115 +58,60 @@ public:
 };
 
 
-class RequestHTTP : public ConnectHTTP {
+class ConnectHTTP : public DNS_HTTP, public Connect {
 public:
-    const UrlParser& url;
+    ConnectHTTP(const UrlParser& url) : 
+        DNS_HTTP(url), Connect(url, sock, dns_server) {}
+};
 
-    RequestHTTP(const UrlParser& url) : ConnectHTTP(url), url(url) {}
 
-    void send_request() const {
-        std::string request = 
-            "GET " + url.path + " HTTP/1.1\r\n"
-            "Host: " + url.host + "\r\n"
-            "Connection: close\r\n"
-            "\r\n";
-        int res_send = send(sock, request.c_str(), request.size(), 0);
-        if(res_send < 0) {
-            std::runtime_error("Не могу отправить HTTP запрос");
-        }
-    }
+class ConnectHTTPS : public DNS_HTTPS, public Connect {
+public:
+    ConnectHTTPS(const UrlParser& url) : 
+        DNS_HTTPS(url), Connect(url, sock, dns_server) {ssl_connect();}
+};
 
-    void recv_request(const std::string& dir) const {
-        std::string head;
-        char buffer[4096];
-        while (true){
-            int bytes = recv(sock, buffer, sizeof(buffer), 0);
-            if (bytes <= 0) {break;}
-            std::string data_str(buffer, bytes);
 
-            size_t begin_endl = data_str.find("\r\n\r\n");
-            if (begin_endl != std::string::npos) {
-                head.append(data_str.substr(0, begin_endl));
-
-                if (head.find("200 OK") == std::string::npos) {
-                    std::cerr << "Сервер вернул ошибку (не 200 OK) для URL-a " 
-                        << url.protocol << "://" << url.host + ":" << url.port 
-                        << url.path << " " << current_time() << std::endl;
-                    std::cout << "==================================" 
-                        << std::endl;
-                    return;
-                }
-
-                size_t begin_data = begin_endl + 4;
-                std::string name_file = get_file_name(head, dir);
-
-                std::cout << "Начало загрузки файла " + name_file 
-                    << " " << current_time() << std::endl;
-                std::cout << "==================================" << std::endl;
-
-                std::ofstream file(dir + "/" + name_file, std::ios::binary);
-                if (!file.is_open()) {
-                    throw std::runtime_error(
-                        "Не удалось открыть файл для записи");
-                }
-                if (begin_data < data_str.size()) {
-                    file.write(data_str.c_str() + begin_data, 
-                        data_str.size() - begin_data);
-                }
-                while (true) {
-                    int bytes = recv(sock, buffer, sizeof(buffer), 0);
-                    if (bytes <= 0) {break;}
-                    file.write(buffer, bytes);
-                }
-                file.close();
-
-                std::cout << "Окончание загрузки файла " + name_file 
-                    << " " << current_time() << std::endl;
-                std::cout << "==================================" << std::endl;
-
-                break;
-
-            } else {
-                head.append(data_str);
-            }
-        }
-    }
-
-    std::string get_file_name(const std::string& header, 
-        const std::string& dir) const {
-            std::string name;
-            size_t begin_cd = header.find("Content-Disposition:");
-
-            if (begin_cd != std::string::npos){
-                size_t end_line = header.find("\r\n", begin_cd);
-                std::string cd_line = header.substr(begin_cd, 
-                    end_line - begin_cd);
-
-                if (cd_line.find("attachment") != std::string::npos) {
-                    size_t begin_fn = cd_line.find("filename=\"");
-
-                    if (begin_fn != std::string::npos) {
-                        size_t begin_name = begin_fn + 10;
-                        size_t end_name = cd_line.find("\"", begin_name);
-                        name = cd_line.substr(begin_name, 
-                            end_name - begin_name);
-                    }
-                }
-            }
-
+class UniqueNameFile{
+public:
+    UniqueNameFile(const std::string& header, const std::string& dir, 
+        const UrlParser& url) {
+            from_header(header);
             if (name.empty()) {
                 name = url.get_filename();
             }
+            valid_name();
+            unique_name(dir);
+        }
 
-            valid_name(name);
-            unique_name(name, dir);
-
-            return name;
+    std::string get() {
+        return name;
     }
 
-
 private:
-    void valid_name(std::string& name) const {
+    std::string name;
+
+    void from_header(const std::string& header) {
+        size_t begin_cd = header.find("Content-Disposition:");
+        if (begin_cd != std::string::npos){
+            size_t end_line = header.find("\r\n", begin_cd);
+            std::string cd_line = header.substr(begin_cd, 
+                end_line - begin_cd);
+
+            if (cd_line.find("attachment") != std::string::npos) {
+                size_t begin_fn = cd_line.find("filename=\"");
+                
+                if (begin_fn != std::string::npos) {
+                    size_t begin_name = begin_fn + 10;
+                    size_t end_name = cd_line.find("\"", begin_name);
+                    name = cd_line.substr(begin_name, 
+                        end_name - begin_name);
+                }
+            }
+        }
+    }
+
+    void valid_name() {
         for(char& c : name){
             bool is_valid = false;
         
@@ -202,7 +143,7 @@ private:
         }
     }
 
-    void unique_name(std::string& name, const std::string& dir) const {
+    void unique_name(const std::string& dir) {
         std::string full_path = dir + "/" + name;
         if (!std::filesystem::exists(full_path)) {
             return;
@@ -218,6 +159,7 @@ private:
             base_name = name;
             extension = "";
         }
+
         size_t counter = 1;
         while (true) {
             std::string new_name = base_name + " (" + 
@@ -234,5 +176,109 @@ private:
 
 };
 
+
+class Request{
+public:
+    const UrlParser& url;
+
+    Request(const UrlParser& url) : url(url) {}
+
+    template<typename Func, typename Conn, typename... Args>
+    void send(Func&& func, Conn conn, Args&&... args) const {
+        std::string request = 
+            "GET " + url.path + " HTTP/1.1\r\n"
+            "Host: " + url.host + "\r\n"
+            "Connection: close\r\n"
+            "\r\n";
+        int res_send = func(conn, request.c_str(), 
+            request.size(), std::forward<Args>(args)...);
+        if (res_send < 0) {
+            throw std::runtime_error("Не могу отправить HTTP запрос");
+        }
+    }
+
+    template<typename Func, typename Conn, typename... Args>
+    void recv(std::string dir, Func&& func, 
+        Conn&& conn, Args&&... args) const {
+            std::string head;
+            char buffer[4096];
+            while (true){
+                int bytes = func(conn, buffer,
+                    sizeof(buffer), std::forward<Args>(args)...);
+                if (bytes <= 0) {break;}
+                std::string data_str(buffer, bytes);
+
+                size_t begin_endl = data_str.find("\r\n\r\n");
+                if (begin_endl != std::string::npos) {
+                    head.append(data_str.substr(0, begin_endl));
+
+                    if (head.find("200 OK") == std::string::npos) {
+                        std::cerr << "Сервер вернул ошибку для URL-a " 
+                            << url.protocol << "://" << url.host + ":" << url.port 
+                            << url.path << " " << current_time() << std::endl;
+                        std::cout << "==================================" 
+                            << std::endl;
+                        return;
+                    }
+
+                    size_t begin_data = begin_endl + 4;
+                    std::string name_file = UniqueNameFile(head, dir, url).get();
+
+                    std::cout << "Начало загрузки файла " + name_file 
+                        << " " << current_time() << std::endl;
+                    std::cout << "==================================" << std::endl;
+
+                    std::ofstream file(dir + "/" + name_file, std::ios::binary);
+                    if (!file.is_open()) {
+                        throw std::runtime_error(
+                            "Не удалось открыть файл для записи");
+                    }
+                    if (begin_data < data_str.size()) {
+                        file.write(data_str.c_str() + begin_data, 
+                            data_str.size() - begin_data);
+                    }
+                    while (true) {
+                        int bytes = func(conn, buffer,
+                            sizeof(buffer), std::forward<Args>(args)...);
+                        if (bytes <= 0) {break;}
+                        file.write(buffer, bytes);
+                    }
+                    file.close();
+
+                    std::cout << "Окончание загрузки файла " + name_file 
+                        << " " << current_time() << std::endl;
+                    std::cout << "==================================" << std::endl;
+
+                    break;
+
+                } else {
+                    head.append(data_str);
+                }
+            }
+    }
+};
+
+
+class RequestHTTP : public ConnectHTTP, public Request {
+public:
+    RequestHTTP(const UrlParser& url) : ConnectHTTP(url), Request(url) {}
+
+    void fetch(std::string dir) {
+        send(::send, sock, 0);
+        recv(dir, ::recv, sock, 0);
+    }
+
+};
+
+
+class RequestHTTPS : public ConnectHTTPS, public Request {
+public:
+    RequestHTTPS(const UrlParser& url) : ConnectHTTPS(url), Request(url) {}
+
+    void fetch(std::string dir) {
+        send(SSL_write, ssl);
+        recv(dir, SSL_read, ssl);
+    }
+};
 
 #endif

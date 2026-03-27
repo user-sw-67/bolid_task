@@ -12,6 +12,23 @@
 #include "time.hpp"
 
 
+bool SSLDefine::initialized = false;
+SSL_CTX* SSLDefine::context = nullptr;
+const int UrlParser::port_http = 80;
+const int UrlParser::port_https = 443;
+
+
+void download(const UrlParser& url, const std::string& dir) {
+    if(url.protocol == "http"){
+        RequestHTTP rq(url);
+        rq.fetch(dir);
+    } else {
+        RequestHTTPS rq(url);
+        rq.fetch(dir);
+    }
+}
+
+
 std::vector<UrlParser> file_read(const std::string& file_name) {
     std::ifstream file(file_name);
     std::vector<UrlParser> urls;
@@ -34,7 +51,7 @@ std::vector<UrlParser> file_read(const std::string& file_name) {
 
 
 int main(int argc, char const *argv[])
-{
+{   
     std::cout << "==================================" << std::endl;
     std::cout << "Программа запущена " << current_time() << std::endl;
     std::cout << "==================================" << std::endl;
@@ -58,15 +75,12 @@ int main(int argc, char const *argv[])
         << concurrent_downloads << std::endl;
     std::cout << "==================================" << std::endl;
 
-    SocketDefine socket;
+    SocketDefine socket_def;
+    SSLDefine ssl_def;
 
     std::vector<UrlParser> urls = file_read(file_with_urls);
     for (auto it = urls.begin(); it < urls.end(); ++it){
-        if(it->protocol == "http"){
-            RequestHTTP rq(*it);
-            rq.send_request();
-            rq.recv_request(output_directory);
-        }
+        download(*it, output_directory);
     }
     
     std::cout << "Программа завершена " << current_time() << std::endl;

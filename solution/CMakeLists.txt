@@ -16,7 +16,9 @@ set(SOURCES
 
 add_executable(loader ${SOURCES})
 
-target_include_directories(loader PRIVATE include)
+find_package(OpenSSL REQUIRED)
+target_include_directories(loader PRIVATE include ${OPENSSL_INCLUDE_DIR})
+target_link_libraries(loader ${OPENSSL_LIBRARIES})
 
 if(WIN32)
     target_link_libraries(loader ws2_32)
