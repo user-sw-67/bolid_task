@@ -5,28 +5,23 @@
 #include <iomanip>
 #include <filesystem>
 #include <stdexcept>
+#include <thread>
+#include <atomic>
+#include <mutex>
 
 #include "socket.hpp"
 #include "url_parser.hpp"
 #include "client.hpp"
 #include "time.hpp"
+#include "multithreading.hpp"
 
 
 bool SSLDefine::initialized = false;
 SSL_CTX* SSLDefine::context = nullptr;
 const int UrlParser::port_http = 80;
 const int UrlParser::port_https = 443;
-
-
-void download(const UrlParser& url, const std::string& dir) {
-    if(url.protocol == "http"){
-        RequestHTTP rq(url);
-        rq.fetch(dir);
-    } else {
-        RequestHTTPS rq(url);
-        rq.fetch(dir);
-    }
-}
+std::mutex mutex_cout;
+std::mutex UniqueNameFile::name_mutex;
 
 
 std::vector<UrlParser> file_read(const std::string& file_name) {
@@ -79,9 +74,11 @@ int main(int argc, char const *argv[])
     SSLDefine ssl_def;
 
     std::vector<UrlParser> urls = file_read(file_with_urls);
-    for (auto it = urls.begin(); it < urls.end(); ++it){
-        download(*it, output_directory);
-    }
+
+    MultithreadingWorker multithreading_worker(
+        urls, output_directory, concurrent_downloads);
+    
+    multithreading_worker.run();
     
     std::cout << "Программа завершена " << current_time() << std::endl;
     std::cout << "==================================" << std::endl;

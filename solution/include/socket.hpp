@@ -4,8 +4,10 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <stdexcept>
+#include <iostream>
+#include <mutex>
 
-#include <url_parser.hpp>
+#include "url_parser.hpp"
 
 #ifdef _WIN32
     #include <winsock2.h>
@@ -23,6 +25,9 @@
     #define SOCKET_ERROR (-1)
     #define closesocket close
 #endif
+
+
+extern std::mutex mutex_cout;
 
 
 class SocketDefine{
@@ -106,7 +111,10 @@ public:
         int ret = SSL_connect(ssl);
         if (ret != 1) {
             int err = SSL_get_error(ssl, ret);
-            std::cerr << "SSL_get_error = " << err << std::endl;
+            {
+                std::lock_guard<std::mutex> lock(mutex_cout);
+                std::cerr << "SSL_get_error = " << err << std::endl;
+            }
             
             if (err == SSL_ERROR_SYSCALL) {
                 throw std::runtime_error("Системная ошибка");
@@ -124,6 +132,5 @@ public:
         }
     }
 };
-
 
 #endif

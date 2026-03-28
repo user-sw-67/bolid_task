@@ -5,10 +5,14 @@
 #include <fstream>
 #include <filesystem>
 #include <iostream>
+#include <mutex>
 
 #include "socket.hpp"
 #include "url_parser.hpp"
 #include "time.hpp"
+
+
+extern std::mutex mutex_cout;
 
 
 class DNS{
@@ -76,6 +80,7 @@ class UniqueNameFile{
 public:
     UniqueNameFile(const std::string& header, const std::string& dir, 
         const UrlParser& url) {
+            std::lock_guard<std::mutex> lock(name_mutex);
             from_header(header);
             if (name.empty()) {
                 name = url.get_filename();
@@ -90,6 +95,7 @@ public:
 
 private:
     std::string name;
+    static std::mutex name_mutex;
 
     void from_header(const std::string& header) {
         size_t begin_cd = header.find("Content-Disposition:");
@@ -213,20 +219,27 @@ public:
                     head.append(data_str.substr(0, begin_endl));
 
                     if (head.find("200 OK") == std::string::npos) {
+                        std::lock_guard<std::mutex> lock(mutex_cout);
                         std::cerr << "Сервер вернул ошибку для URL-a " 
-                            << url.protocol << "://" << url.host + ":" << url.port 
-                            << url.path << " " << current_time() << std::endl;
+                            << url.protocol << "://" << url.host + ":" << 
+                            url.port << url.path << " " << 
+                            current_time() << std::endl;
                         std::cout << "==================================" 
                             << std::endl;
                         return;
                     }
 
                     size_t begin_data = begin_endl + 4;
-                    std::string name_file = UniqueNameFile(head, dir, url).get();
+                    std::string name_file = UniqueNameFile(
+                        head, dir, url).get();
 
-                    std::cout << "Начало загрузки файла " + name_file 
-                        << " " << current_time() << std::endl;
-                    std::cout << "==================================" << std::endl;
+                    {
+                        std::lock_guard<std::mutex> lock(mutex_cout);
+                        std::cout << "Начало загрузки файла " + name_file 
+                            << " " << current_time() << std::endl;
+                        std::cout << "==================================" 
+                            << std::endl;
+                    }
 
                     std::ofstream file(dir + "/" + name_file, std::ios::binary);
                     if (!file.is_open()) {
@@ -244,11 +257,14 @@ public:
                         file.write(buffer, bytes);
                     }
                     file.close();
-
-                    std::cout << "Окончание загрузки файла " + name_file 
-                        << " " << current_time() << std::endl;
-                    std::cout << "==================================" << std::endl;
-
+                    
+                    {
+                        std::lock_guard<std::mutex> lock(mutex_cout);
+                        std::cout << "Окончание загрузки файла " + name_file 
+                            << " " << current_time() << std::endl;
+                        std::cout << "==================================" 
+                        << std::endl;
+                    }
                     break;
 
                 } else {
