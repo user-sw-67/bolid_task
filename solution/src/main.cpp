@@ -47,6 +47,8 @@ std::vector<UrlParser> file_read(const std::string& file_name) {
 
 int main(int argc, char const *argv[])
 {   
+    auto start_time = std::chrono::high_resolution_clock::now();
+
     std::cout << "==================================" << std::endl;
     std::cout << "Программа запущена " << current_time() << std::endl;
     std::cout << "==================================" << std::endl;
@@ -83,5 +85,13 @@ int main(int argc, char const *argv[])
     std::cout << "Программа завершена " << current_time() << std::endl;
     std::cout << "==================================" << std::endl;
 
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = end_time - start_time;
+    std::chrono::duration<double> seconds = duration;
+
+    std::cout << "Время выполнения: " << std::fixed << std::setprecision(1) 
+          << seconds.count() << " сек" << std::endl;
+    std::cout << "==================================" << std::endl;
+    
     return 0;
 }

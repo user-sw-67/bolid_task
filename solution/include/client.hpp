@@ -87,6 +87,7 @@ public:
             }
             valid_name();
             unique_name(dir);
+            std::ofstream stub(dir + "/" + name, std::ios::binary);
         }
 
     std::string get() {
